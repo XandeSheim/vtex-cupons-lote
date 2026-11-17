@@ -200,7 +200,7 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
       <h1>Cupons em Lote</h1>
       <div class="sub">VTEX · criação de cupons com códigos personalizados</div>
     </div>
-    <div class="pill"><i></i>Rodando no seu PC · credenciais não saem daqui</div>
+    <div class="pill"><i></i>Credenciais não são armazenadas no servidor</div>
   </header>
 
   <div class="grid">
@@ -341,11 +341,12 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
   <footer>Endpoint: POST /api/rnb/pvt/multiple-coupons · cupons existentes com o mesmo código são atualizados, não duplicados</footer>
 </div>
 
+<script src="vendor/xlsx.full.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const VALID = /^[A-Za-z0-9_\-]+$/;
 const HEADER_RX = /cupom|cupon|coupon|c[oó]digo|code/i;
-let sheets = null, codes = [], jobId = null, logLen = 0, confirmArmed = false, timer = null;
+let sheets = null, codes = [], confirmArmed = false, running = false, cancelReq = false, results = [];
 
 /* ---------- persistência ---------- */
 const SAVE = ["account","env","utmSource","utmCampaign","maxPerClient","interval","batch"];
@@ -367,51 +368,76 @@ function save(){
 }
 document.querySelectorAll("input,select").forEach(el => el.addEventListener("change", () => { save(); renderSummary(); }));
 document.querySelectorAll("input").forEach(el => el.addEventListener("input", renderSummary));
-
 $("eye").onclick = () => { const t=$("appToken"); t.type = t.type==="password"?"text":"password"; };
 
-/* ---------- mensagens ---------- */
+/* ---------- utilidades ---------- */
 function msg(id, type, text){ const m=$(id); m.className="msg show "+type; m.textContent=text; }
 function clearMsg(id){ $(id).className="msg"; }
-function creds(){ return {account:$("account").value.trim(), env:$("env").value, appKey:$("appKey").value.trim(), appToken:$("appToken").value.trim()}; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function creds(){ return {account:$("account").value.trim().toLowerCase(), env:$("env").value, appKey:$("appKey").value.trim(), appToken:$("appToken").value.trim()}; }
 function credsOk(id){
   const c=creds(); const miss=[];
   if(!c.account) miss.push("Account"); if(!c.appKey) miss.push("AppKey"); if(!c.appToken) miss.push("AppToken");
   if(miss.length){ msg(id,"err","Preencha: "+miss.join(", ")+"."); return null; }
   return c;
 }
-async function post(url, body){
-  const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  return r.json();
-}
 function busy(btn,on){ btn.disabled=on; btn.classList.toggle("loading",on); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const HINTS = {401:"AppKey/AppToken inválidos.",403:"A chave não tem permissão em Promoções (Rates and Benefits).",404:"Account ou ambiente não encontrado."};
+
+async function vtex(method, path, body){
+  let r;
+  try{
+    r = await fetch("api/vtex",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({...creds(), method, path, body})});
+  }catch(e){ return {ok:false,status:0,data:"O servidor do app não respondeu."}; }
+  let j; try{ j = await r.json(); }catch(e){ return {ok:false,status:r.status,data:`Resposta inesperada do servidor (HTTP ${r.status}).`}; }
+  if(j.error) return {ok:false,status:r.status,data:j.error};
+  return j;
+}
+function errText(r){ return `HTTP ${r.status}. ${HINTS[r.status] || (r.data||"").toString().slice(0,200)}`; }
 
 /* ---------- 1. testar conexão ---------- */
 $("btnTest").onclick = async () => {
   const c = credsOk("msgConn"); if(!c) return;
   busy($("btnTest"),true); clearMsg("msgConn");
-  try{ const r = await post("/api/test", c); msg("msgConn", r.ok?"ok":"err", r.ok?r.message:r.error); }
-  catch(e){ msg("msgConn","err","O app local não respondeu. A janela preta do launcher ainda está aberta?"); }
+  const r = await vtex("GET","/api/rnb/pvt/benefits/calculatorconfiguration");
+  if(r.ok) msg("msgConn","ok","Conexão OK: credenciais com acesso a Promoções.");
+  else msg("msgConn","err", r.status ? errText(r) : r.data);
   busy($("btnTest"),false);
 };
 
-/* ---------- 3. upload ---------- */
+/* ---------- 3. upload (lido no próprio navegador) ---------- */
 const drop=$("drop"), fi=$("fileInput");
 drop.onclick = () => fi.click();
 ["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
 ["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", ev => { if(ev.dataTransfer.files[0]) upload(ev.dataTransfer.files[0]); });
-fi.onchange = () => { if(fi.files[0]) upload(fi.files[0]); };
+drop.addEventListener("drop", ev => { if(ev.dataTransfer.files[0]) readFile(ev.dataTransfer.files[0]); });
+fi.onchange = () => { if(fi.files[0]) readFile(fi.files[0]); };
 $("btnClear").onclick = () => { sheets=null; codes=[]; fi.value=""; $("fileBox").classList.remove("show"); $("mapper").classList.remove("show"); drop.style.display=""; clearMsg("msgFile"); compute(); };
 
-async function upload(file){
+function cleanRows(rows){
+  return rows.map(r => (r||[]).map(v => v==null ? "" : String(v).trim())).filter(r => r.some(c => c));
+}
+async function readFile(file){
   clearMsg("msgFile");
-  const fd = new FormData(); fd.append("file", file);
+  const name = file.name.toLowerCase();
   try{
-    const r = await (await fetch("/api/parse",{method:"POST",body:fd})).json();
-    if(!r.ok){ msg("msgFile","err",r.error); return; }
-    sheets = r.sheets;
-    $("fileName").textContent = r.filename;
+    let out = {};
+    if(name.endsWith(".txt")){
+      const text = await file.text();
+      out = {"Lista": text.split(/\r?\n/).map(l => [l.trim()]).filter(r => r[0])};
+    }else{
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, {type:"array", raw:false});
+      wb.SheetNames.forEach(n => {
+        const rows = cleanRows(XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:false, defval:""}));
+        if(rows.length) out[n] = rows;
+      });
+    }
+    if(!Object.keys(out).length){ msg("msgFile","err","O arquivo está vazio."); return; }
+    sheets = out;
+    $("fileName").textContent = file.name;
     const n = Object.keys(sheets).length;
     $("fileMeta").textContent = (file.size/1024).toFixed(1)+" KB · "+n+(n>1?" abas":" aba");
     $("fileBox").classList.add("show"); drop.style.display="none";
@@ -419,7 +445,7 @@ async function upload(file){
     $("sheetField").style.display = n>1 ? "" : "none";
     $("mapper").classList.add("show");
     pickSheet(true);
-  }catch(e){ msg("msgFile","err","Não consegui enviar o arquivo para o app local."); }
+  }catch(e){ msg("msgFile","err","Não consegui ler o arquivo. Use .xlsx, .csv ou .txt."); }
 }
 function pickSheet(auto){
   const rows = sheets[$("sheetSel").value]; const first = rows[0]||[];
@@ -468,7 +494,6 @@ function compute(){
   else clearMsg("msgFile");
   disarm(); renderSummary();
 }
-function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* ---------- 4. envio ---------- */
 function config(){
@@ -483,8 +508,9 @@ function renderSummary(){
   ].map(([k,v])=>`<span class="tag">${k}: <b>${esc(v)}</b></span>`).join("");
 }
 function item(code,c){
+  const max = parseInt(c.maxItemsPerClient,10);
   return {quantity:1, couponConfiguration:{utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, couponCode:code,
-    isArchived:false, maxItemsPerClient:+c.maxItemsPerClient||1, expirationIntervalPerUse:c.expirationIntervalPerUse||"00:00:00"}};
+    isArchived:false, maxItemsPerClient:Number.isFinite(max)?max:1, expirationIntervalPerUse:c.expirationIntervalPerUse||"00:00:00"}};
 }
 $("btnPreview").onclick = () => {
   const p=$("json");
@@ -497,16 +523,25 @@ $("btnCheck").onclick = async () => {
   const c = credsOk("msgSend"); if(!c) return;
   if(!codes.length){ msg("msgSend","err","Suba a lista de cupons primeiro."); return; }
   busy($("btnCheck"),true); clearMsg("msgSend");
-  try{
-    const r = await post("/api/check",{...c, codes});
-    if(!r.ok) msg("msgSend","err",r.error);
-    else if(!r.conflitos.length) msg("msgSend","ok",`Nenhum desses códigos existe na loja (${r.totalNaLoja} cupons cadastrados). Pode criar.`);
-    else msg("msgSend","warn",`${r.conflitos.length} código(s) já existem e serão ATUALIZADOS: `+r.conflitos.slice(0,15).map(x=>`${x.code} (utm ${x.utmSource||"—"})`).join(", ")+(r.conflitos.length>15?"…":""));
-  }catch(e){ msg("msgSend","err","O app local não respondeu."); }
+  const r = await vtex("GET","/api/rnb/pvt/coupon");
+  if(!r.ok) msg("msgSend","err","Não consegui listar os cupons da loja. "+(r.status?errText(r):r.data));
+  else{
+    const map = new Map((r.data||[]).map(([code,utm]) => [code.toLowerCase(), utm]));
+    const hits = codes.filter(x => map.has(x.toLowerCase()));
+    if(!hits.length) msg("msgSend","ok",`Nenhum desses códigos existe na loja (${map.size} cupons cadastrados). Pode criar.`);
+    else msg("msgSend","warn",`${hits.length} código(s) já existem e serão ATUALIZADOS: `+hits.slice(0,15).map(x=>`${x} (utm ${map.get(x.toLowerCase())||"—"})`).join(", ")+(hits.length>15?"…":""));
+  }
   busy($("btnCheck"),false);
 };
 function disarm(){ confirmArmed=false; const b=$("btnSend"); b.classList.remove("confirm"); b.classList.add("primary"); b.textContent="Criar cupons"; }
+function logLine(text, cls){ const d=document.createElement("div"); if(cls) d.className=cls; d.textContent=text; const L=$("log"); L.appendChild(d); L.scrollTop=L.scrollHeight; }
+function progress(sent,total,ok,fail,t0){
+  $("bar").style.width = (total?Math.round(sent/total*100):0)+"%";
+  $("pText").textContent = `${sent} de ${total} processados · ${ok} ok · ${fail} com erro`;
+  $("pTime").textContent = ((Date.now()-t0)/1000).toFixed(1)+"s";
+}
 $("btnSend").onclick = async () => {
+  if(running) return;
   const c = credsOk("msgSend"); if(!c) return;
   const cfg = config();
   if(!cfg.utmSource){ msg("msgSend","err","Preencha o utm_source (passo 2)."); return; }
@@ -516,39 +551,45 @@ $("btnSend").onclick = async () => {
     b.textContent=`Confirmar: criar ${codes.length} cupons em ${cfg.account}`; return;
   }
   disarm(); clearMsg("msgSend"); $("json").classList.remove("show");
-  const r = await post("/api/send",{...cfg, codes});
-  if(!r.ok){ msg("msgSend","err",r.error); return; }
-  jobId=r.jobId; logLen=0; $("log").innerHTML=""; $("bar").className="bar"; $("bar").style.width="0";
+  running=true; cancelReq=false; results=[];
+  $("log").innerHTML=""; $("bar").className="bar"; $("bar").style.width="0";
   $("btnSend").disabled=true; $("btnCancel").style.display=""; $("btnReport").style.display="none";
-  poll();
-};
-$("btnCancel").onclick = () => jobId && fetch(`/api/job/${jobId}/cancel`,{method:"POST"});
-async function poll(){
-  clearTimeout(timer);
-  try{
-    const r = await (await fetch(`/api/job/${jobId}?since=${logLen}`)).json();
-    logLen = r.logLen;
-    const L=$("log");
-    r.log.forEach(line => {
-      const d=document.createElement("div");
-      d.className = /ERRO|falhou/.test(line)?"err":/OK/.test(line)?"ok":/interrompido|Aguardando/.test(line)?"warn":"";
-      d.textContent = line; L.appendChild(d);
-    });
-    L.scrollTop = L.scrollHeight;
-    const pct = r.total ? Math.round(r.sent/r.total*100) : 0;
-    $("bar").style.width = pct+"%";
-    $("pText").textContent = `${r.sent} de ${r.total} processados · ${r.okCount} ok · ${r.fail} com erro`;
-    $("pTime").textContent = r.elapsed+"s";
-    if(r.done){
-      $("bar").classList.add(r.fail ? "fail" : "done"); $("bar").style.width="100%";
-      $("btnSend").disabled=false; $("btnCancel").style.display="none";
-      $("btnReport").href=`/api/job/${jobId}/report.csv`; $("btnReport").style.display="";
-      msg("msgSend", r.fail?"warn":"ok", r.fail ? `${r.okCount} criados e ${r.fail} com erro. Baixe o relatório para ver quais falharam.` : `Pronto! ${r.okCount} cupons criados/atualizados com utm ${config().utmSource}.`);
-      return;
+
+  const list = codes.slice(); const size = Math.max(1, Math.min(parseInt(cfg.batchSize,10)||200, 500));
+  const nb = Math.ceil(list.length/size); let sent=0, ok=0, fail=0; const t0=Date.now();
+  logLine(`Iniciando: ${list.length} cupons em ${nb} lote(s) de até ${size}.`);
+  for(let b=0; b<nb; b++){
+    const chunk = list.slice(b*size,(b+1)*size);
+    if(cancelReq){
+      logLine("Envio interrompido pelo usuário.","warn");
+      list.slice(b*size).forEach(x => results.push([x,"não enviado","cancelado"]));
+      break;
     }
-  }catch(e){}
-  timer = setTimeout(poll, 700);
-}
+    let r = null;
+    for(let a=1; a<=3; a++){
+      r = await vtex("POST","/api/rnb/pvt/multiple-coupons", chunk.map(x=>item(x,cfg)));
+      if(r.ok || ![0,429,500,502,503,504].includes(r.status) || a===3) break;
+      logLine(`Lote ${b+1}: tentativa ${a} falhou (HTTP ${r.status}). Tentando de novo…`,"warn");
+      await sleep(4000*a);
+    }
+    sent += chunk.length;
+    if(r.ok){ ok += chunk.length; chunk.forEach(x=>results.push([x,"criado/atualizado",""])); logLine(`Lote ${b+1}/${nb}: OK (${chunk.length} cupons)`,"ok"); }
+    else{ fail += chunk.length; const d = r.status?errText(r):r.data; chunk.forEach(x=>results.push([x,"erro",d])); logLine(`Lote ${b+1}/${nb}: ERRO. ${d}`,"err"); }
+    progress(sent,list.length,ok,fail,t0);
+    await sleep(400);
+  }
+  logLine(`Fim: ${ok} enviados com sucesso, ${fail} com erro.`);
+  $("bar").classList.add(fail ? "fail" : "done"); $("bar").style.width="100%";
+  running=false; $("btnSend").disabled=false; $("btnCancel").style.display="none";
+  const csv = "﻿cupom;status;detalhe\n" + results.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+  const a = $("btnReport"); if(a.href.startsWith("blob:")) URL.revokeObjectURL(a.href);
+  a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download = `relatorio_cupons_${new Date().toISOString().slice(0,16).replace(/[:T]/g,"-")}.csv`;
+  a.style.display="";
+  msg("msgSend", fail?"warn":"ok", fail ? `${ok} criados e ${fail} com erro. Baixe o relatório para ver quais falharam.` : `Pronto! ${ok} cupons criados/atualizados com utm ${cfg.utmSource}.`);
+};
+$("btnCancel").onclick = () => { cancelReq = true; logLine("Interrompendo após o lote atual…","warn"); };
+window.addEventListener("beforeunload", e => { if(running){ e.preventDefault(); e.returnValue=""; } });
 
 load(); renderSummary();
 </script>
