@@ -4,3 +4,4 @@ __pycache__/
 cupons*.txt
 *.xlsx
 relatorio_*.csv
+!public/exemplo-cupons.xlsx
