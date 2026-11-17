@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+cupons*.txt
+*.xlsx
+relatorio_*.csv

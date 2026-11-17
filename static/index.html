@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cupons em Lote · VTEX</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%230A84FF'/><path d='M18 24h28v6a4 4 0 0 0 0 8v6H18v-6a4 4 0 0 0 0-8z' fill='white'/></svg>">
+<style>
+:root{
+  --text:#f5f5f7;
+  --muted:rgba(235,235,245,.68);
+  --faint:rgba(235,235,245,.42);
+  --blue:#0a84ff;
+  --blue-2:#5ac8fa;
+  --ok:#30d158;
+  --warn:#ffd60a;
+  --err:#ff453a;
+  --glass:rgba(255,255,255,.10);
+  --stroke:rgba(255,255,255,.22);
+  --stroke-soft:rgba(255,255,255,.12);
+  --field:rgba(255,255,255,.08);
+  --radius:28px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  color:var(--text);font-size:14px;line-height:1.45;letter-spacing:-.005em;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;background:#1a1530;
+}
+/* ---------- wallpaper estilo macOS ---------- */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:
+  radial-gradient(1100px 800px at 0% 0%,#5e2ca5 0%,transparent 60%),
+  radial-gradient(900px 700px at 100% 0%,#d9376e 0%,transparent 58%),
+  radial-gradient(1000px 800px at 100% 100%,#ff8a3d 0%,transparent 55%),
+  radial-gradient(900px 700px at 0% 100%,#1f6fd1 0%,transparent 60%),
+  #2a1f4f}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55;animation:float 26s ease-in-out infinite}
+.b1{width:560px;height:560px;background:#ff5fa2;top:-160px;right:10%}
+.b2{width:520px;height:520px;background:#3d7bff;bottom:-180px;left:-80px;animation-delay:-9s}
+.b3{width:380px;height:380px;background:#ffb340;top:50%;right:-60px;opacity:.45;animation-delay:-15s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,-30px) scale(1.07)}66%{transform:translate(-40px,30px) scale(.95)}}
+.grain{position:fixed;inset:0;z-index:-1;opacity:.04;pointer-events:none;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+/* ---------- vidro (Liquid Glass) ---------- */
+.glass,.card,.pill{
+  background:linear-gradient(155deg,rgba(255,255,255,.20) 0%,rgba(255,255,255,.08) 38%,rgba(255,255,255,.05) 100%);
+  border:1px solid var(--stroke);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    inset 0 -1px 0 rgba(255,255,255,.06),
+    inset 1px 0 0 rgba(255,255,255,.10),
+    0 30px 60px -24px rgba(10,5,30,.55),
+    0 2px 8px rgba(10,5,30,.18);
+}
+
+/* ---------- janela ---------- */
+.wrap{max-width:1140px;margin:0 auto;padding:34px 24px 60px}
+.window{border-radius:34px;padding:0 0 26px;overflow:hidden}
+.titlebar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--stroke-soft)}
+.titlebar .dot{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.titlebar .r{background:#ff5f57}.titlebar .y{background:#febc2e}.titlebar .g{background:#28c840}
+.titlebar .t{flex:1;text-align:center;color:var(--muted);font-size:13px;font-weight:600;margin-right:52px}
+.inner{padding:24px 26px 0}
+header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.logo{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(160deg,#6ab8ff,#0a84ff 55%,#0060df);
+  box-shadow:0 10px 24px -8px rgba(10,132,255,.8),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(0,40,120,.35)}
+.logo svg{width:26px;height:26px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.025em}
+.sub{color:var(--muted);font-size:13px}
+.pill{margin-left:auto;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;color:var(--muted);font-size:12px;white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+
+.grid{display:grid;grid-template-columns:1fr 1.15fr;gap:18px}
+.col{display:flex;flex-direction:column;gap:18px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.pill{display:none}}
+
+.card{position:relative;padding:22px;border-radius:var(--radius)}
+.card h2{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em;margin-bottom:16px}
+.step{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;
+  background:linear-gradient(160deg,#6ab8ff,#0a84ff);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.card h2 .hint{margin-left:auto;font-weight:500;font-size:12px;color:var(--faint)}
+
+/* ---------- campos ---------- */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+label{font-size:12px;color:var(--muted);font-weight:500;padding-left:4px}
+input,select{width:100%;height:42px;padding:0 14px;border-radius:14px;font:inherit;color:var(--text);
+  background:var(--field);border:1px solid var(--stroke-soft);outline:none;transition:.18s;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
+input::placeholder{color:var(--faint)}
+input:focus,select:focus{border-color:rgba(10,132,255,.9);box-shadow:0 0 0 4px rgba(10,132,255,.28);background:rgba(255,255,255,.13)}
+select{appearance:none;-webkit-appearance:none;padding-right:34px;
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffffaa' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 13px center}
+select option{background:#2b2442;color:#fff}
+.pw{position:relative}
+.pw input{padding-right:44px}
+.eye{position:absolute;right:6px;top:6px;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.eye:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.check{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;cursor:pointer;user-select:none;padding-left:0}
+.check input{width:16px;height:16px;accent-color:var(--blue);box-shadow:none}
+details{margin-top:2px}
+summary{cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;list-style:none;display:flex;align-items:center;gap:6px;padding-left:4px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"›";display:inline-block;transition:.2s;font-size:16px}
+details[open] summary::before{transform:rotate(90deg)}
+details .row{margin-top:12px}
+
+/* ---------- botões (cápsulas) ---------- */
+.btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{height:40px;padding:0 18px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;color:var(--text);border:1px solid var(--stroke);
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 12px -6px rgba(0,0,0,.35);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:.18s}
+.btn:hover:not(:disabled){background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12));transform:translateY(-1px)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{border-color:rgba(255,255,255,.25);background:linear-gradient(180deg,#3a9bff,#0a84ff 60%,#0070e8);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 10px 24px -10px rgba(10,132,255,.95)}
+.btn.primary:hover:not(:disabled){background:linear-gradient(180deg,#4ea6ff,#1a8cff 60%,#0a78f0)}
+.btn.danger{color:#ffb4ae;border-color:rgba(255,69,58,.5)}
+.btn.confirm{border-color:rgba(255,255,255,.25);background:linear-gradient(180deg,#ffb340,#ff9500);color:#2a1700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 10px 24px -10px rgba(255,149,0,.9)}
+.btn.sm{height:32px;padding:0 14px;font-size:12px}
+
+.msg{margin-top:12px;padding:10px 14px;border-radius:16px;font-size:13px;display:none;border:1px solid;backdrop-filter:blur(20px)}
+.msg.show{display:block}
+.msg.ok{background:rgba(48,209,88,.16);border-color:rgba(48,209,88,.45);color:#c9f7d4}
+.msg.err{background:rgba(255,69,58,.16);border-color:rgba(255,69,58,.45);color:#ffd2ce}
+.msg.warn{background:rgba(255,214,10,.14);border-color:rgba(255,214,10,.45);color:#fff1b3}
+
+/* ---------- upload ---------- */
+.drop{border:1.5px dashed rgba(255,255,255,.35);border-radius:22px;padding:28px 18px;text-align:center;cursor:pointer;
+  background:rgba(255,255,255,.05);transition:.2s}
+.drop:hover,.drop.over{border-color:var(--blue-2);background:rgba(10,132,255,.14)}
+.drop .ico{width:48px;height:48px;margin:0 auto 10px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(160deg,rgba(255,255,255,.3),rgba(255,255,255,.1));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.drop b{display:block;font-size:14px;margin-bottom:3px}
+.drop span{color:var(--muted);font-size:12px}
+.file{display:none;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid var(--stroke-soft);margin-bottom:12px}
+.file.show{display:flex}
+.file .name{font-weight:600;word-break:break-all}
+.file .meta{color:var(--muted);font-size:12px}
+.file .x{margin-left:auto}
+.mapper{display:none}
+.mapper.show{display:block}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 14px}
+.stat{padding:12px 12px 10px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid var(--stroke-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
+.stat b{display:block;font-size:22px;font-weight:700;letter-spacing:-.03em}
+.stat span{color:var(--muted);font-size:11px;font-weight:500}
+.stat.g b{color:var(--ok)} .stat.y b{color:var(--warn)} .stat.r b{color:var(--err)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:280px;overflow:auto;padding:2px}
+.chip{padding:4px 10px;border-radius:999px;font-size:12px;font-family:"SF Mono",ui-monospace,Consolas,monospace;
+  background:rgba(255,255,255,.1);border:1px solid var(--stroke-soft)}
+.chip.bad{border-color:rgba(255,69,58,.6);color:#ffb4ae}
+.chip.more{color:var(--muted)}
+.empty{color:var(--faint);font-size:13px;text-align:center;padding:8px 0}
+
+/* ---------- envio ---------- */
+.full{grid-column:1/-1}
+.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tag{padding:6px 12px;border-radius:999px;font-size:12px;background:rgba(255,255,255,.08);border:1px solid var(--stroke-soft);color:var(--muted)}
+.tag b{color:var(--text);font-weight:600}
+.progress{height:10px;border-radius:999px;background:rgba(0,0,0,.22);border:1px solid var(--stroke-soft);overflow:hidden;margin:18px 0 8px;box-shadow:inset 0 1px 3px rgba(0,0,0,.25)}
+.bar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#0a84ff,#5ac8fa);
+  box-shadow:0 0 16px rgba(90,200,250,.7),inset 0 1px 0 rgba(255,255,255,.5);transition:width .35s ease}
+.bar.done{background:linear-gradient(90deg,#28b14c,#30d158)}
+.bar.fail{background:linear-gradient(90deg,#ff9f0a,#ff453a)}
+.pmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.log{margin-top:14px;height:190px;overflow:auto;padding:12px 14px;border-radius:18px;background:rgba(10,6,25,.38);border:1px solid var(--stroke-soft);
+  font-family:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace;font-size:12px;color:rgba(235,235,245,.85);white-space:pre-wrap}
+.log .ok{color:var(--ok)} .log .err{color:#ff6961} .log .warn{color:var(--warn)}
+pre.json{margin-top:12px;max-height:240px;overflow:auto;padding:12px 14px;border-radius:18px;background:rgba(10,6,25,.38);border:1px solid var(--stroke-soft);
+  font-family:"SF Mono",ui-monospace,Consolas,monospace;font-size:12px;color:rgba(235,235,245,.85);display:none}
+pre.json.show{display:block}
+footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:sp .7s linear infinite;display:none}
+.loading .spin{display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="grain"></div>
+
+<div class="wrap">
+ <div class="window glass">
+  <div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="t">Cupons em Lote</div></div>
+  <div class="inner">
+  <header>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a3 3 0 0 0 0 6v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a3 3 0 0 0 0-6z"/><path d="M9.5 14.5l5-5"/><circle cx="9.5" cy="9.5" r=".6" fill="#fff"/><circle cx="14.5" cy="14.5" r=".6" fill="#fff"/></svg></div>
+    <div>
+      <h1>Cupons em Lote</h1>
+      <div class="sub">VTEX · criação de cupons com códigos personalizados</div>
+    </div>
+    <div class="pill"><i></i>Rodando no seu PC · credenciais não saem daqui</div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <!-- 1. conexão -->
+      <section class="card">
+        <h2><span class="step">1</span>Conexão VTEX</h2>
+        <div class="field">
+          <label for="account">Account</label>
+          <input id="account" placeholder="ex.: iotrussardi" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="appKey">AppKey</label>
+          <input id="appKey" placeholder="vtexappkey-…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="appToken">AppToken</label>
+          <div class="pw">
+            <input id="appToken" type="password" placeholder="••••••••••••" autocomplete="off" spellcheck="false">
+            <button class="eye" type="button" id="eye" title="Mostrar/ocultar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <details>
+          <summary>Avançado</summary>
+          <div class="field" style="margin-top:12px">
+            <label for="env">Ambiente</label>
+            <select id="env">
+              <option value="vtexcommercestable">vtexcommercestable (padrão)</option>
+              <option value="vtexcommercebeta">vtexcommercebeta</option>
+            </select>
+          </div>
+        </details>
+        <div class="btns" style="margin-top:14px">
+          <button class="btn" id="btnTest"><span class="spin"></span>Testar conexão</button>
+          <label class="check"><input type="checkbox" id="remember">Lembrar chave e token neste PC</label>
+        </div>
+        <div class="msg" id="msgConn"></div>
+      </section>
+
+      <!-- 2. utm -->
+      <section class="card">
+        <h2><span class="step">2</span>Vínculo com a promoção</h2>
+        <div class="row">
+          <div class="field">
+            <label for="utmSource">utm_source</label>
+            <input id="utmSource" placeholder="ex.: funcionario10" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="utmCampaign">utm_campaign <span style="color:var(--faint)">(opcional)</span></label>
+            <input id="utmCampaign" placeholder="ex.: funcionario10" spellcheck="false">
+          </div>
+        </div>
+        <details>
+          <summary>Regras de uso</summary>
+          <div class="row">
+            <div class="field">
+              <label for="maxPerClient">Limite de uso por cliente</label>
+              <input id="maxPerClient" type="number" min="0" value="1">
+            </div>
+            <div class="field">
+              <label for="interval">Intervalo entre usos (hh:mm:ss)</label>
+              <input id="interval" value="00:00:00">
+            </div>
+          </div>
+          <div class="field">
+            <label for="batch">Cupons por requisição</label>
+            <input id="batch" type="number" min="1" max="500" value="200">
+          </div>
+        </details>
+        <p class="sub" style="margin-top:10px;font-size:12px">A promoção precisa usar a mesma UTM para os cupons aplicarem desconto.</p>
+      </section>
+    </div>
+
+    <!-- 3. cupons -->
+    <section class="card">
+      <h2><span class="step">3</span>Lista de cupons <span class="hint">.xlsx · .csv · .txt</span></h2>
+
+      <div class="drop" id="drop">
+        <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></div>
+        <b>Arraste a planilha ou o .txt aqui</b>
+        <span>ou clique para escolher o arquivo</span>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.txt" hidden>
+      </div>
+
+      <div class="file" id="fileBox">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+        <div><div class="name" id="fileName"></div><div class="meta" id="fileMeta"></div></div>
+        <button class="btn sm x" id="btnClear">Trocar</button>
+      </div>
+
+      <div class="mapper" id="mapper">
+        <div class="row">
+          <div class="field" id="sheetField">
+            <label for="sheetSel">Aba</label>
+            <select id="sheetSel"></select>
+          </div>
+          <div class="field">
+            <label for="colSel">Coluna com os códigos</label>
+            <select id="colSel"></select>
+          </div>
+        </div>
+        <label class="check" style="margin-bottom:14px"><input type="checkbox" id="hasHeader" checked>A primeira linha é cabeçalho</label>
+      </div>
+
+      <div class="stats">
+        <div class="stat g"><b id="sValid">0</b><span>Para enviar</span></div>
+        <div class="stat"><b id="sRows">0</b><span>Linhas</span></div>
+        <div class="stat y"><b id="sDup">0</b><span>Duplicados</span></div>
+        <div class="stat r"><b id="sBad">0</b><span>Inválidos</span></div>
+      </div>
+      <div class="chips" id="chips"><div class="empty">Os códigos aparecem aqui depois do upload.</div></div>
+      <div class="msg" id="msgFile"></div>
+    </section>
+
+    <!-- 4. envio -->
+    <section class="card full">
+      <h2><span class="step">4</span>Criar cupons</h2>
+      <div class="summary" id="summary"></div>
+      <div class="btns">
+        <button class="btn" id="btnPreview">Ver payload</button>
+        <button class="btn" id="btnCheck"><span class="spin"></span>Verificar se já existem</button>
+        <button class="btn primary" id="btnSend">Criar cupons</button>
+        <button class="btn danger" id="btnCancel" style="display:none">Interromper</button>
+        <a class="btn" id="btnReport" style="display:none;text-decoration:none" download>Baixar relatório</a>
+      </div>
+      <div class="msg" id="msgSend"></div>
+      <pre class="json" id="json"></pre>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="pmeta"><span id="pText">Aguardando</span><span id="pTime"></span></div>
+      <div class="log" id="log">Nenhum envio ainda.</div>
+    </section>
+  </div>
+
+  </div>
+ </div>
+  <footer>Endpoint: POST /api/rnb/pvt/multiple-coupons · cupons existentes com o mesmo código são atualizados, não duplicados</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const VALID = /^[A-Za-z0-9_\-]+$/;
+const HEADER_RX = /cupom|cupon|coupon|c[oó]digo|code/i;
+let sheets = null, codes = [], jobId = null, logLen = 0, confirmArmed = false, timer = null;
+
+/* ---------- persistência ---------- */
+const SAVE = ["account","env","utmSource","utmCampaign","maxPerClient","interval","batch"];
+const SECRET = ["appKey","appToken"];
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem("cuponsLote")||"{}");
+    SAVE.concat(SECRET).forEach(k => { if(s[k]!=null) $(k).value = s[k]; });
+    $("remember").checked = !!s.remember;
+  }catch(e){}
+}
+function save(){
+  try{
+    const s = {remember:$("remember").checked};
+    SAVE.forEach(k => s[k] = $(k).value);
+    if(s.remember) SECRET.forEach(k => s[k] = $(k).value);
+    localStorage.setItem("cuponsLote", JSON.stringify(s));
+  }catch(e){}
+}
+document.querySelectorAll("input,select").forEach(el => el.addEventListener("change", () => { save(); renderSummary(); }));
+document.querySelectorAll("input").forEach(el => el.addEventListener("input", renderSummary));
+
+$("eye").onclick = () => { const t=$("appToken"); t.type = t.type==="password"?"text":"password"; };
+
+/* ---------- mensagens ---------- */
+function msg(id, type, text){ const m=$(id); m.className="msg show "+type; m.textContent=text; }
+function clearMsg(id){ $(id).className="msg"; }
+function creds(){ return {account:$("account").value.trim(), env:$("env").value, appKey:$("appKey").value.trim(), appToken:$("appToken").value.trim()}; }
+function credsOk(id){
+  const c=creds(); const miss=[];
+  if(!c.account) miss.push("Account"); if(!c.appKey) miss.push("AppKey"); if(!c.appToken) miss.push("AppToken");
+  if(miss.length){ msg(id,"err","Preencha: "+miss.join(", ")+"."); return null; }
+  return c;
+}
+async function post(url, body){
+  const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  return r.json();
+}
+function busy(btn,on){ btn.disabled=on; btn.classList.toggle("loading",on); }
+
+/* ---------- 1. testar conexão ---------- */
+$("btnTest").onclick = async () => {
+  const c = credsOk("msgConn"); if(!c) return;
+  busy($("btnTest"),true); clearMsg("msgConn");
+  try{ const r = await post("/api/test", c); msg("msgConn", r.ok?"ok":"err", r.ok?r.message:r.error); }
+  catch(e){ msg("msgConn","err","O app local não respondeu. A janela preta do launcher ainda está aberta?"); }
+  busy($("btnTest"),false);
+};
+
+/* ---------- 3. upload ---------- */
+const drop=$("drop"), fi=$("fileInput");
+drop.onclick = () => fi.click();
+["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", ev => { if(ev.dataTransfer.files[0]) upload(ev.dataTransfer.files[0]); });
+fi.onchange = () => { if(fi.files[0]) upload(fi.files[0]); };
+$("btnClear").onclick = () => { sheets=null; codes=[]; fi.value=""; $("fileBox").classList.remove("show"); $("mapper").classList.remove("show"); drop.style.display=""; clearMsg("msgFile"); compute(); };
+
+async function upload(file){
+  clearMsg("msgFile");
+  const fd = new FormData(); fd.append("file", file);
+  try{
+    const r = await (await fetch("/api/parse",{method:"POST",body:fd})).json();
+    if(!r.ok){ msg("msgFile","err",r.error); return; }
+    sheets = r.sheets;
+    $("fileName").textContent = r.filename;
+    const n = Object.keys(sheets).length;
+    $("fileMeta").textContent = (file.size/1024).toFixed(1)+" KB · "+n+(n>1?" abas":" aba");
+    $("fileBox").classList.add("show"); drop.style.display="none";
+    $("sheetSel").innerHTML = Object.keys(sheets).map(s=>`<option>${esc(s)}</option>`).join("");
+    $("sheetField").style.display = n>1 ? "" : "none";
+    $("mapper").classList.add("show");
+    pickSheet(true);
+  }catch(e){ msg("msgFile","err","Não consegui enviar o arquivo para o app local."); }
+}
+function pickSheet(auto){
+  const rows = sheets[$("sheetSel").value]; const first = rows[0]||[];
+  const width = Math.max(...rows.slice(0,50).map(r=>r.length));
+  let hdr = first.some(c => HEADER_RX.test(c)) || (first.length>1 && first.every(c => c && !VALID.test(c)));
+  if(width===1 && !HEADER_RX.test(first[0]||"")) hdr = false;
+  if(auto) $("hasHeader").checked = hdr;
+  const opts = []; let best = 0, bestScore = -1;
+  for(let i=0;i<width;i++){
+    const name = $("hasHeader").checked && first[i] ? first[i] : "Coluna "+String.fromCharCode(65+i);
+    opts.push(`<option value="${i}">${esc(name)}</option>`);
+    const sample = rows.slice(1,60).map(r=>r[i]||"");
+    let score = sample.filter(v=>v && VALID.test(v) && /[a-z]/i.test(v) && !/^\d+$/.test(v)).length;
+    if(HEADER_RX.test(first[i]||"")) score += 1000;
+    if(score>bestScore){ bestScore=score; best=i; }
+  }
+  $("colSel").innerHTML = opts.join("");
+  $("colSel").value = String(best);
+  compute();
+}
+$("sheetSel").onchange = () => pickSheet(true);
+$("hasHeader").onchange = () => { const c=$("colSel").value; pickSheet(false); $("colSel").value=c; compute(); };
+$("colSel").onchange = compute;
+
+function compute(){
+  codes = [];
+  const bad = [], seen = new Set(); let dup = 0, total = 0;
+  if(sheets){
+    const rows = sheets[$("sheetSel").value]; const col = +$("colSel").value;
+    rows.slice($("hasHeader").checked?1:0).forEach(r => {
+      const v = (r[col]||"").trim(); if(!v) return; total++;
+      if(!VALID.test(v)){ bad.push(v); return; }
+      const k = v.toLowerCase(); if(seen.has(k)){ dup++; return; }
+      seen.add(k); codes.push(v);
+    });
+  }
+  $("sRows").textContent = total; $("sValid").textContent = codes.length;
+  $("sDup").textContent = dup; $("sBad").textContent = bad.length;
+  const show = 80;
+  let html = bad.slice(0,20).map(c=>`<span class="chip bad" title="Só letras, números, - e _">${esc(c)}</span>`).join("");
+  html += codes.slice(0,show).map(c=>`<span class="chip">${esc(c)}</span>`).join("");
+  if(codes.length>show) html += `<span class="chip more">+${codes.length-show} códigos</span>`;
+  $("chips").innerHTML = html || `<div class="empty">Os códigos aparecem aqui depois do upload.</div>`;
+  if(bad.length) msg("msgFile","warn",`${bad.length} código(s) com espaço ou caractere especial ficaram de fora (em vermelho).`);
+  else if(sheets && !codes.length) msg("msgFile","warn","Nenhum código nessa coluna. Escolha outra coluna.");
+  else clearMsg("msgFile");
+  disarm(); renderSummary();
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- 4. envio ---------- */
+function config(){
+  return {...creds(), utmSource:$("utmSource").value.trim(), utmCampaign:$("utmCampaign").value.trim(),
+    maxItemsPerClient:$("maxPerClient").value, expirationIntervalPerUse:$("interval").value.trim(), batchSize:$("batch").value};
+}
+function renderSummary(){
+  const c = config();
+  $("summary").innerHTML = [
+    ["Account", c.account||"—"], ["Cupons", codes.length], ["utm_source", c.utmSource||"—"],
+    ["utm_campaign", c.utmCampaign||"—"], ["Uso por cliente", c.maxItemsPerClient||"—"],
+  ].map(([k,v])=>`<span class="tag">${k}: <b>${esc(v)}</b></span>`).join("");
+}
+function item(code,c){
+  return {quantity:1, couponConfiguration:{utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, couponCode:code,
+    isArchived:false, maxItemsPerClient:+c.maxItemsPerClient||1, expirationIntervalPerUse:c.expirationIntervalPerUse||"00:00:00"}};
+}
+$("btnPreview").onclick = () => {
+  const p=$("json");
+  if(p.classList.contains("show")){ p.classList.remove("show"); return; }
+  const c = config();
+  p.textContent = codes.length ? JSON.stringify(codes.slice(0,2).map(x=>item(x,c)),null,2)+(codes.length>2?`\n\n… e mais ${codes.length-2} itens no mesmo formato`:"") : "Suba a lista de cupons primeiro.";
+  p.classList.add("show");
+};
+$("btnCheck").onclick = async () => {
+  const c = credsOk("msgSend"); if(!c) return;
+  if(!codes.length){ msg("msgSend","err","Suba a lista de cupons primeiro."); return; }
+  busy($("btnCheck"),true); clearMsg("msgSend");
+  try{
+    const r = await post("/api/check",{...c, codes});
+    if(!r.ok) msg("msgSend","err",r.error);
+    else if(!r.conflitos.length) msg("msgSend","ok",`Nenhum desses códigos existe na loja (${r.totalNaLoja} cupons cadastrados). Pode criar.`);
+    else msg("msgSend","warn",`${r.conflitos.length} código(s) já existem e serão ATUALIZADOS: `+r.conflitos.slice(0,15).map(x=>`${x.code} (utm ${x.utmSource||"—"})`).join(", ")+(r.conflitos.length>15?"…":""));
+  }catch(e){ msg("msgSend","err","O app local não respondeu."); }
+  busy($("btnCheck"),false);
+};
+function disarm(){ confirmArmed=false; const b=$("btnSend"); b.classList.remove("confirm"); b.classList.add("primary"); b.textContent="Criar cupons"; }
+$("btnSend").onclick = async () => {
+  const c = credsOk("msgSend"); if(!c) return;
+  const cfg = config();
+  if(!cfg.utmSource){ msg("msgSend","err","Preencha o utm_source (passo 2)."); return; }
+  if(!codes.length){ msg("msgSend","err","Suba a lista de cupons (passo 3)."); return; }
+  if(!confirmArmed){
+    confirmArmed=true; const b=$("btnSend"); b.classList.remove("primary"); b.classList.add("confirm");
+    b.textContent=`Confirmar: criar ${codes.length} cupons em ${cfg.account}`; return;
+  }
+  disarm(); clearMsg("msgSend"); $("json").classList.remove("show");
+  const r = await post("/api/send",{...cfg, codes});
+  if(!r.ok){ msg("msgSend","err",r.error); return; }
+  jobId=r.jobId; logLen=0; $("log").innerHTML=""; $("bar").className="bar"; $("bar").style.width="0";
+  $("btnSend").disabled=true; $("btnCancel").style.display=""; $("btnReport").style.display="none";
+  poll();
+};
+$("btnCancel").onclick = () => jobId && fetch(`/api/job/${jobId}/cancel`,{method:"POST"});
+async function poll(){
+  clearTimeout(timer);
+  try{
+    const r = await (await fetch(`/api/job/${jobId}?since=${logLen}`)).json();
+    logLen = r.logLen;
+    const L=$("log");
+    r.log.forEach(line => {
+      const d=document.createElement("div");
+      d.className = /ERRO|falhou/.test(line)?"err":/OK/.test(line)?"ok":/interrompido|Aguardando/.test(line)?"warn":"";
+      d.textContent = line; L.appendChild(d);
+    });
+    L.scrollTop = L.scrollHeight;
+    const pct = r.total ? Math.round(r.sent/r.total*100) : 0;
+    $("bar").style.width = pct+"%";
+    $("pText").textContent = `${r.sent} de ${r.total} processados · ${r.okCount} ok · ${r.fail} com erro`;
+    $("pTime").textContent = r.elapsed+"s";
+    if(r.done){
+      $("bar").classList.add(r.fail ? "fail" : "done"); $("bar").style.width="100%";
+      $("btnSend").disabled=false; $("btnCancel").style.display="none";
+      $("btnReport").href=`/api/job/${jobId}/report.csv`; $("btnReport").style.display="";
+      msg("msgSend", r.fail?"warn":"ok", r.fail ? `${r.okCount} criados e ${r.fail} com erro. Baixe o relatório para ver quais falharam.` : `Pronto! ${r.okCount} cupons criados/atualizados com utm ${config().utmSource}.`);
+      return;
+    }
+  }catch(e){}
+  timer = setTimeout(poll, 700);
+}
+
+load(); renderSummary();
+</script>
+</body>
+</html>
