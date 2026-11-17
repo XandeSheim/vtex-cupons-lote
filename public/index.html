@@ -71,12 +71,14 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
 .logo svg{width:26px;height:26px}
 h1{font-size:26px;font-weight:700;letter-spacing:-.025em}
 .sub{color:var(--muted);font-size:13px}
-.pill{margin-left:auto;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;color:var(--muted);font-size:12px;white-space:nowrap}
+.head-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;color:var(--muted);font-size:12px;white-space:nowrap}
 .pill i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
 
 .grid{display:grid;grid-template-columns:1fr 1.15fr;gap:18px}
 .col{display:flex;flex-direction:column;gap:18px}
 @media (max-width:900px){.grid{grid-template-columns:1fr}.pill{display:none}}
+.titlebar .t a{color:inherit;text-decoration:none}
 
 .card{position:relative;padding:22px;border-radius:var(--radius)}
 .card h2{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em;margin-bottom:16px}
@@ -132,6 +134,42 @@ details .row{margin-top:12px}
   border:1px solid var(--stroke);background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
 .step-btn:hover{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12))}
 .restr-hint{margin-top:12px;font-size:12px;color:var(--muted)}
+/* ---------- documentação ---------- */
+.help-overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:28px;
+  background:rgba(12,8,30,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:fade .2s ease}
+.help-overlay[hidden]{display:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.help-panel{width:min(820px,100%);max-height:calc(100vh - 56px);display:flex;flex-direction:column;border-radius:30px;overflow:hidden;animation:pop .25s cubic-bezier(.2,.9,.3,1.1);
+  background:linear-gradient(155deg,rgba(60,45,110,.78),rgba(40,30,80,.72))}
+.help-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 26px 12px}
+.help-kicker{font-size:12px;color:var(--blue-2);font-weight:600;letter-spacing:.02em}
+.help-top h2{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.help-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--stroke);background:rgba(255,255,255,.12);color:var(--text);cursor:pointer;font-size:13px;flex:none}
+.help-close:hover{background:rgba(255,255,255,.22)}
+.help-nav{display:flex;flex-wrap:wrap;gap:6px;padding:0 26px 14px;border-bottom:1px solid var(--stroke-soft)}
+.help-nav a{font-size:12px;color:var(--text);text-decoration:none;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid var(--stroke-soft)}
+.help-nav a:hover{background:rgba(255,255,255,.18)}
+.help-body{overflow:auto;padding:18px 26px 28px;font-size:14px;line-height:1.6;color:rgba(245,245,247,.92)}
+.help-body section{padding-top:18px;scroll-margin-top:8px}
+.help-body h3{font-size:16px;font-weight:650;margin-bottom:8px;letter-spacing:-.01em}
+.help-body p{margin-bottom:8px}
+.help-body .lead{font-size:15px;color:var(--text)}
+.help-body ul,.help-body ol{padding-left:20px;margin-bottom:8px}
+.help-body li{margin-bottom:6px}
+.help-body code{font-family:"SF Mono",ui-monospace,Consolas,monospace;font-size:12.5px;padding:1px 6px;border-radius:6px;background:rgba(255,255,255,.12)}
+.hstep{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;margin-bottom:8px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid var(--stroke-soft)}
+.hstep .step{flex:none;margin-top:1px}
+.tip{margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(10,132,255,.16);border:1px solid rgba(90,200,250,.35)}
+.htable{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;border:1px solid var(--stroke-soft);border-radius:14px;overflow:hidden}
+.htable th,.htable td{text-align:left;padding:9px 12px;vertical-align:top;border-bottom:1px solid var(--stroke-soft)}
+.htable tr:last-child td{border-bottom:0}
+.htable th{background:rgba(255,255,255,.08);font-weight:600}
+.htable td:first-child{white-space:nowrap;font-weight:600}
+.faq{margin-bottom:8px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--stroke-soft)}
+.faq summary{font-size:14px;color:var(--text);font-weight:600;padding-left:0}
+.faq p{margin:8px 0 2px}
+body.modal-open{overflow:hidden}
 /* ---------- botões (cápsulas) ---------- */
 .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .btn{height:40px;padding:0 18px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;
@@ -225,7 +263,10 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
       <h1>Cupons em Lote</h1>
       <div class="sub">VTEX · criação de cupons com códigos personalizados</div>
     </div>
-    <div class="pill"><i></i>Credenciais não são armazenadas no servidor</div>
+    <div class="head-actions">
+      <button class="btn sm help-btn" id="helpBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>Como usar</button>
+      <div class="pill"><i></i>Credenciais não são armazenadas no servidor</div>
+    </div>
   </header>
 
   <div class="grid">
@@ -377,7 +418,97 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
 
   </div>
  </div>
-  <footer>Endpoint: POST /api/rnb/pvt/multiple-coupons · cupons existentes com o mesmo código são atualizados, não duplicados</footer>
+  <footer><a href="#ajuda" id="footHelp" style="color:var(--blue-2);text-decoration:none;font-weight:600">Como usar</a> · Endpoint: POST /api/rnb/pvt/multiple-coupons · cupons existentes com o mesmo código são atualizados, não duplicados</footer>
+</div>
+
+<!-- ===== Documentação (modal) ===== -->
+<div class="help-overlay" id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="help-panel glass">
+    <div class="help-top">
+      <div>
+        <div class="help-kicker">Documentação</div>
+        <h2 id="helpTitle">Como usar o Cupons em Lote</h2>
+      </div>
+      <button class="help-close" id="helpClose" aria-label="Fechar">✕</button>
+    </div>
+    <nav class="help-nav">
+      <a href="#h-antes">Antes de começar</a><a href="#h-passos">Passo a passo</a><a href="#h-planilha">Planilha</a>
+      <a href="#h-restricoes">Restrições</a><a href="#h-depois">Depois do envio</a><a href="#h-erros">Erros comuns</a><a href="#h-faq">Dúvidas</a>
+    </nav>
+    <div class="help-body">
+      <p class="lead">O app cria vários cupons de uma vez na VTEX, cada um com o código que você escolher (por exemplo, <code>mariasilva10</code>), e liga todos à mesma promoção pela UTM.</p>
+
+      <section id="h-antes">
+        <h3>Antes de começar</h3>
+        <ol class="steps">
+          <li><b>Uma AppKey e um AppToken</b> com acesso ao módulo de <b>Promoções e Impostos</b> (Rates and Benefits). Eles são gerados em <i>Configurações da conta › Chaves de aplicação</i> no Admin.</li>
+          <li><b>A promoção criada</b>, com a condição de cupom/UTM usando o valor que você vai informar aqui (ex.: <code>funcionario10</code>). Cupom sem promoção ligada não dá erro, mas também não aplica desconto.</li>
+          <li><b>A lista de códigos</b> em .xlsx, .csv ou .txt. Se não tiver uma, baixe a planilha de exemplo no passo 3.</li>
+        </ol>
+      </section>
+
+      <section id="h-passos">
+        <h3>Passo a passo</h3>
+        <div class="hstep"><span class="step">1</span><div><b>Conexão VTEX.</b> Preencha <i>Account</i> (o nome da loja, ex.: <code>iotrussardi</code>), <i>AppKey</i> e <i>AppToken</i> e clique em <b>Testar conexão</b>. Se aparecer "Conexão OK", pode seguir.</div></div>
+        <div class="hstep"><span class="step">2</span><div><b>Vínculo com a promoção.</b> Informe a <i>utm_source</i> (obrigatória) e, se a promoção usar, a <i>utm_campaign</i>. Todos os cupons do lote recebem esses valores. Em <b>Restrições</b>, decida se vai limitar o uso (veja abaixo).</div></div>
+        <div class="hstep"><span class="step">3</span><div><b>Lista de cupons.</b> Arraste o arquivo para a área de upload. O app acha sozinho a coluna dos códigos; se errar, escolha a coluna certa no seletor. Confira os números: <i>Para enviar</i>, <i>Duplicados</i> (enviados uma vez só) e <i>Inválidos</i> (ficam de fora).</div></div>
+        <div class="hstep"><span class="step">4</span><div><b>Criar cupons.</b> Recomendado: clique em <b>Verificar se já existem</b> antes. Depois, <b>Criar cupons</b> e confirme no segundo clique. Acompanhe a barra de progresso e o log; no fim, baixe o relatório.</div></div>
+        <div class="tip"><b>Dica:</b> na primeira vez com uma promoção nova, faça um teste com 2 ou 3 códigos, confira no Admin (<i>Promoções › Cupons</i>) e aplique um deles no checkout antes de subir a lista inteira.</div>
+      </section>
+
+      <section id="h-planilha">
+        <h3>Como montar a planilha</h3>
+        <ul>
+          <li>Um código por linha, de preferência numa coluna chamada <code>Cupom</code>.</li>
+          <li>Use só letras, números, hífen (<code>-</code>) e sublinhado (<code>_</code>). Sem espaços nem acentos.</li>
+          <li>Outras colunas (nome, cargo, loja) podem ficar; o app ignora e elas ajudam você a conferir.</li>
+          <li>Em .txt, basta um código por linha, sem cabeçalho.</li>
+          <li>O arquivo é lido no seu navegador: a planilha não é enviada para o servidor, só os códigos na hora de criar.</li>
+        </ul>
+      </section>
+
+      <section id="h-restricoes">
+        <h3>Restrições de uso</h3>
+        <p>Funciona igual ao Admin da VTEX:</p>
+        <ul>
+          <li><b>Desligado:</b> cada cupom pode ser usado quantas vezes for preciso.</li>
+          <li><b>Ligado:</b> você define quantas vezes <b>cada cupom</b> pode ser usado no total, na loja inteira. Se um pedido com o cupom for cancelado, o uso volta a ficar disponível.</li>
+        </ul>
+        <p>A mesma regra vale para todos os cupons do lote. Para regras diferentes, separe em listas e rode uma vez para cada.</p>
+      </section>
+
+      <section id="h-depois">
+        <h3>Depois do envio</h3>
+        <ul>
+          <li><b>Baixar relatório:</b> CSV com cada código e o status (<i>criado/atualizado</i>, <i>erro</i> ou <i>não enviado</i>). Abre no Excel.</li>
+          <li>Se algum lote falhar, monte uma planilha só com os códigos com erro e rode de novo. Reenviar um código que já foi criado não duplica, só atualiza.</li>
+          <li>Para conferir, abra <i>Promoções › Cupons</i> no Admin e busque alguns códigos.</li>
+        </ul>
+      </section>
+
+      <section id="h-erros">
+        <h3>Erros comuns</h3>
+        <table class="htable">
+          <tr><th>Mensagem</th><th>O que fazer</th></tr>
+          <tr><td>HTTP 401</td><td>AppKey ou AppToken errados. Copie de novo, sem espaços.</td></tr>
+          <tr><td>HTTP 403</td><td>A chave não tem permissão em Promoções. Peça para incluir o recurso no perfil de acesso dela.</td></tr>
+          <tr><td>HTTP 404</td><td>Account ou ambiente errado. Use só o nome da loja, sem <code>https://</code> nem <code>.com.br</code>.</td></tr>
+          <tr><td>Account inválido</td><td>O campo aceita só letras, números e hífen.</td></tr>
+          <tr><td>Nenhum código nessa coluna</td><td>Escolha outra coluna no seletor ou ajuste a opção de cabeçalho.</td></tr>
+          <tr><td>Tentativa falhou (429/5xx)</td><td>A VTEX pediu calma. O app tenta de novo sozinho até 3 vezes; se persistir, diminua <i>Cupons por requisição</i> em Avançado.</td></tr>
+        </table>
+      </section>
+
+      <section id="h-faq">
+        <h3>Dúvidas frequentes</h3>
+        <details class="faq"><summary>E se o código já existir na loja?</summary><p>A VTEX atualiza o cupom existente com a nova UTM e as novas restrições, em vez de criar outro. Use <b>Verificar se já existem</b> para ver quais seriam afetados antes de enviar.</p></details>
+        <details class="faq"><summary>Dá para apagar um cupom criado errado?</summary><p>Não. A VTEX não exclui cupons, só arquiva, pelo Admin ou pela API, um de cada vez.</p></details>
+        <details class="faq"><summary>Existe limite de cupons?</summary><p>Sim, a VTEX limita o número de cupons ativos por loja e recomenda reaproveitar cupons quando possível. Cupons arquivados não contam.</p></details>
+        <details class="faq"><summary>Minhas credenciais ficam salvas?</summary><p>Não no servidor: elas vão junto de cada requisição e são repassadas direto para a VTEX. No seu navegador, só ficam guardadas se você marcar <i>Lembrar chave e token neste PC</i>. Em computador compartilhado, deixe desmarcado.</p></details>
+        <details class="faq"><summary>Como acompanho quanto cada cupom foi usado?</summary><p>No Admin, em <i>Promoções › Cupons</i>, cada cupom mostra quantas vezes foi usado. Para faturamento por cupom, use os pedidos (OMS), onde o código fica registrado em cada pedido.</p></details>
+      </section>
+    </div>
+  </div>
 </div>
 
 <script src="vendor/xlsx.full.min.js"></script>
@@ -647,6 +778,18 @@ $("btnSend").onclick = async () => {
 };
 $("btnCancel").onclick = () => { cancelReq = true; logLine("Interrompendo após o lote atual…","warn"); };
 window.addEventListener("beforeunload", e => { if(running){ e.preventDefault(); e.returnValue=""; } });
+
+/* ---------- documentação ---------- */
+const help=$("help"); let lastFocus=null;
+function openHelp(){ lastFocus=document.activeElement; help.hidden=false; document.body.classList.add("modal-open"); help.querySelector(".help-body").scrollTop=0; $("helpClose").focus(); if(location.hash!=="#ajuda") history.replaceState(null,"","#ajuda"); }
+function closeHelp(){ help.hidden=true; document.body.classList.remove("modal-open"); if(location.hash==="#ajuda") history.replaceState(null,"",location.pathname); lastFocus&&lastFocus.focus(); }
+$("helpBtn").onclick=openHelp; $("footHelp").onclick=e=>{e.preventDefault();openHelp();};
+$("helpClose").onclick=closeHelp;
+help.addEventListener("click",e=>{ if(e.target===help) closeHelp(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !help.hidden) closeHelp(); });
+help.querySelectorAll(".help-nav a").forEach(a=>a.onclick=e=>{ e.preventDefault(); help.querySelector(a.getAttribute("href")).scrollIntoView({behavior:"smooth",block:"start"}); });
+if(location.hash==="#ajuda") openHelp();
+window.addEventListener("hashchange",()=>{ if(location.hash==="#ajuda" && help.hidden) openHelp(); });
 
 load(); renderLimit();
 </script>
