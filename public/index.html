@@ -110,6 +110,28 @@ summary::before{content:"›";display:inline-block;transition:.2s;font-size:16px
 details[open] summary::before{transform:rotate(90deg)}
 details .row{margin-top:12px}
 
+.divider{height:1px;background:var(--stroke-soft);margin:6px 0 16px}
+.restr-title{font-size:14px;font-weight:600}
+.restr-sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.switch-row{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;font-size:13px;color:var(--text);padding-left:0}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{position:absolute;opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;border-radius:999px;background:rgba(120,120,128,.36);transition:.25s;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.slider::before{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;border-radius:50%;background:#fff;
+  box-shadow:0 3px 8px rgba(0,0,0,.25),0 1px 1px rgba(0,0,0,.12);transition:.25s cubic-bezier(.3,1.4,.6,1)}
+.switch input:checked+.slider{background:var(--ok)}
+.switch input:checked+.slider::before{transform:translateX(20px)}
+.switch input:focus-visible+.slider{box-shadow:0 0 0 4px rgba(10,132,255,.35)}
+.limit-box{display:none;margin-top:14px}
+.limit-box.show{display:block}
+.limit-box label{display:block;margin-bottom:6px}
+.stepper{display:flex;align-items:center;gap:8px;max-width:220px}
+.stepper input{text-align:center;font-weight:600;-moz-appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.step-btn{flex:none;width:42px;height:42px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;color:var(--text);
+  border:1px solid var(--stroke);background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.step-btn:hover{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12))}
+.restr-hint{margin-top:12px;font-size:12px;color:var(--muted)}
 /* ---------- botões (cápsulas) ---------- */
 .btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .btn{height:40px;padding:0 18px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;
@@ -237,6 +259,10 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
               <option value="vtexcommercebeta">vtexcommercebeta</option>
             </select>
           </div>
+          <div class="field">
+            <label for="batch">Cupons por requisição</label>
+            <input id="batch" type="number" min="1" max="500" value="200">
+          </div>
         </details>
         <div class="btns" style="margin-top:14px">
           <button class="btn" id="btnTest"><span class="spin"></span>Testar conexão</button>
@@ -258,23 +284,28 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
             <input id="utmCampaign" placeholder="ex.: funcionario10" spellcheck="false">
           </div>
         </div>
-        <details>
-          <summary>Regras de uso</summary>
-          <div class="row">
-            <div class="field">
-              <label for="maxPerClient">Limite de uso por cliente</label>
-              <input id="maxPerClient" type="number" min="0" value="1">
-            </div>
-            <div class="field">
-              <label for="interval">Intervalo entre usos (hh:mm:ss)</label>
-              <input id="interval" value="00:00:00">
+        <div class="divider"></div>
+        <div class="restr">
+          <div class="restr-head">
+            <div>
+              <div class="restr-title">Restrições</div>
+              <div class="restr-sub">Configure as restrições de uso do cupom</div>
             </div>
           </div>
-          <div class="field">
-            <label for="batch">Cupons por requisição</label>
-            <input id="batch" type="number" min="1" max="500" value="200">
+          <label class="switch-row">
+            <span class="switch"><input type="checkbox" id="limitOn"><span class="slider"></span></span>
+            <span>Limitar o uso do cupom na minha loja</span>
+          </label>
+          <div class="limit-box" id="limitBox">
+            <label for="maxUsage">Quantidade de usos de cada cupom</label>
+            <div class="stepper">
+              <button type="button" class="step-btn" id="decUsage" aria-label="Diminuir">−</button>
+              <input id="maxUsage" type="number" min="1" step="1" value="1" inputmode="numeric">
+              <button type="button" class="step-btn" id="incUsage" aria-label="Aumentar">+</button>
+            </div>
           </div>
-        </details>
+          <p class="restr-hint" id="limitHint"></p>
+        </div>
         <p class="sub" style="margin-top:10px;font-size:12px">A promoção precisa usar a mesma UTM para os cupons aplicarem desconto.</p>
       </section>
     </div>
@@ -357,18 +388,19 @@ const HEADER_RX = /cupom|cupon|coupon|c[oó]digo|code/i;
 let sheets = null, codes = [], confirmArmed = false, running = false, cancelReq = false, results = [];
 
 /* ---------- persistência ---------- */
-const SAVE = ["account","env","utmSource","utmCampaign","maxPerClient","interval","batch"];
+const SAVE = ["account","env","utmSource","utmCampaign","maxUsage","batch"];
 const SECRET = ["appKey","appToken"];
 function load(){
   try{
     const s = JSON.parse(localStorage.getItem("cuponsLote")||"{}");
     SAVE.concat(SECRET).forEach(k => { if(s[k]!=null) $(k).value = s[k]; });
     $("remember").checked = !!s.remember;
+    $("limitOn").checked = !!s.limitOn;
   }catch(e){}
 }
 function save(){
   try{
-    const s = {remember:$("remember").checked};
+    const s = {remember:$("remember").checked, limitOn:$("limitOn").checked};
     SAVE.forEach(k => s[k] = $(k).value);
     if(s.remember) SECRET.forEach(k => s[k] = $(k).value);
     localStorage.setItem("cuponsLote", JSON.stringify(s));
@@ -376,6 +408,22 @@ function save(){
 }
 document.querySelectorAll("input,select").forEach(el => el.addEventListener("change", () => { save(); renderSummary(); }));
 document.querySelectorAll("input").forEach(el => el.addEventListener("input", renderSummary));
+/* ---------- restrições ---------- */
+function usageVal(){ const n = parseInt($("maxUsage").value,10); return Number.isFinite(n) && n>=1 ? n : 1; }
+function renderLimit(){
+  const on = $("limitOn").checked;
+  $("limitBox").classList.toggle("show", on);
+  $("limitHint").textContent = on
+    ? `Cada cupom poderá ser usado ${usageVal()} vez(es) no total na loja. Pedido cancelado devolve o uso.`
+    : "Sem limite: cada cupom pode ser usado quantas vezes for preciso.";
+  renderSummary();
+}
+$("limitOn").addEventListener("change", () => { save(); renderLimit(); disarm(); });
+$("maxUsage").addEventListener("input", renderLimit);
+$("maxUsage").addEventListener("blur", () => { $("maxUsage").value = usageVal(); save(); renderLimit(); });
+$("decUsage").onclick = () => { $("maxUsage").value = Math.max(1, usageVal()-1); save(); renderLimit(); };
+$("incUsage").onclick = () => { $("maxUsage").value = usageVal()+1; save(); renderLimit(); };
+
 $("eye").onclick = () => { const t=$("appToken"); t.type = t.type==="password"?"text":"password"; };
 
 /* ---------- utilidades ---------- */
@@ -506,19 +554,20 @@ function compute(){
 /* ---------- 4. envio ---------- */
 function config(){
   return {...creds(), utmSource:$("utmSource").value.trim(), utmCampaign:$("utmCampaign").value.trim(),
-    maxItemsPerClient:$("maxPerClient").value, expirationIntervalPerUse:$("interval").value.trim(), batchSize:$("batch").value};
+    limitOn:$("limitOn").checked, maxUsage:usageVal(), batchSize:$("batch").value};
 }
 function renderSummary(){
   const c = config();
   $("summary").innerHTML = [
     ["Account", c.account||"—"], ["Cupons", codes.length], ["utm_source", c.utmSource||"—"],
-    ["utm_campaign", c.utmCampaign||"—"], ["Uso por cliente", c.maxItemsPerClient||"—"],
+    ["utm_campaign", c.utmCampaign||"—"], ["Uso", c.limitOn ? `até ${c.maxUsage}x por cupom` : "ilimitado"],
   ].map(([k,v])=>`<span class="tag">${k}: <b>${esc(v)}</b></span>`).join("");
 }
 function item(code,c){
-  const max = parseInt(c.maxItemsPerClient,10);
-  return {quantity:1, couponConfiguration:{utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, couponCode:code,
-    isArchived:false, maxItemsPerClient:Number.isFinite(max)?max:1, expirationIntervalPerUse:c.expirationIntervalPerUse||"00:00:00"}};
+  // maxItemsPerClient e expirationIntervalPerUse são campos legados da VTEX e não são enviados.
+  const cfg = {utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, couponCode:code, isArchived:false};
+  if(c.limitOn) cfg.maxUsage = c.maxUsage;
+  return {quantity:1, couponConfiguration:cfg};
 }
 $("btnPreview").onclick = () => {
   const p=$("json");
@@ -599,7 +648,7 @@ $("btnSend").onclick = async () => {
 $("btnCancel").onclick = () => { cancelReq = true; logLine("Interrompendo após o lote atual…","warn"); };
 window.addEventListener("beforeunload", e => { if(running){ e.preventDefault(); e.returnValue=""; } });
 
-load(); renderSummary();
+load(); renderLimit();
 </script>
 </body>
 </html>
