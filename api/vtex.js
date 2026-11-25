@@ -57,7 +57,8 @@ module.exports = async (req, res) => {
     } else if (!r.ok) {
       data = text.slice(0, 800);
     }
-    return res.status(200).json({ ok: r.ok, status: r.status, data });
+    const retryAfter = parseInt(r.headers.get("retry-after") || "", 10) || null;
+    return res.status(200).json({ ok: r.ok, status: r.status, data, retryAfter });
   } catch (e) {
     return res.status(200).json({ ok: false, status: 0, data: "Sem resposta da VTEX: " + (e.message || e) });
   }

@@ -707,18 +707,26 @@ function upsertItem(code,c){
   else { cfg.maxItemsPerClient = 0; cfg.expirationIntervalPerUse = "00:00:00"; }
   return cfg;
 }
+// Ritmo adaptativo: começa em ~3 req/s; a cada 429 espera (Retry-After ou 15–60 s) e desacelera.
+let pace = 300;
 async function upsertMany(list,cfg,label){
   let ok=0; const out=[];
   for(const x of list){
+    if(cancelReq){ out.push([x,"não enviado","cancelado"]); continue; }
     let r=null;
-    for(let a=1;a<=3;a++){
+    for(let a=1;a<=8;a++){
       r = await vtex("POST","/api/rnb/pvt/coupon", upsertItem(x,cfg));
-      if(r.ok || ![0,429,500,502,503,504].includes(r.status) || a===3) break;
-      await sleep(2000*a);
+      if(r.ok || ![0,429,500,502,503,504].includes(r.status) || a===8) break;
+      if(r.status===429){
+        pace = Math.min(pace*2, 3000);
+        const wait = (r.retryAfter ? r.retryAfter*1000 : Math.min(15000*a, 60000));
+        logLine(`Limite da VTEX atingido. Aguardando ${Math.round(wait/1000)} s e reduzindo o ritmo…`,"warn");
+        await sleep(wait);
+      } else await sleep(2000*a);
     }
-    if(r.ok){ ok++; out.push([x,"atualizado",""]); logLine(`${label}: ${x} atualizado com a nova config`,"ok"); }
+    if(r.ok){ ok++; out.push([x,"atualizado",""]); logLine(`${label}: ${x} atualizado com a nova config`,"ok"); pace = Math.max(300, pace-20); }
     else{ const d=r.status?errText(r):r.data; out.push([x,"erro",d]); logLine(`${label}: ${x} ERRO. ${d}`,"err"); }
-    await sleep(150);
+    await sleep(pace);
   }
   return {ok, out};
 }

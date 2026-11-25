@@ -87,7 +87,8 @@ def vtex():
             data = []
     elif not r.ok:
         data = r.text[:800]
-    return jsonify(ok=r.ok, status=r.status_code, data=data)
+    ra = r.headers.get("Retry-After", "")
+    return jsonify(ok=r.ok, status=r.status_code, data=data, retryAfter=int(ra) if ra.isdigit() else None)
 
 
 if __name__ == "__main__":
