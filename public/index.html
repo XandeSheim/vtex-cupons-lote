@@ -704,7 +704,7 @@ function item(code,c){
 function upsertItem(code,c){
   const cfg = {couponCode:code, utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, isArchived:false};
   if(c.limitOn) cfg.maxUsage = c.maxUsage;
-  else { cfg.maxItemsPerClient = 0; cfg.expirationIntervalPerUse = "00:00:00"; }
+  else { cfg.maxItemsPerClient = null; cfg.expirationIntervalPerUse = null; } // null = sem limite; 0 ainda conta como "limitado" no Admin
   return cfg;
 }
 // Ritmo adaptativo: começa em ~3 req/s; a cada 429 espera (Retry-After ou 15–60 s) e desacelera.
