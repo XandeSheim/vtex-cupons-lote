@@ -501,7 +501,7 @@ footer{margin-top:22px;text-align:center;color:var(--faint);font-size:12px}
 
       <section id="h-faq">
         <h3>Dúvidas frequentes</h3>
-        <details class="faq"><summary>E se o código já existir na loja?</summary><p>A VTEX atualiza o cupom existente com a nova UTM e as novas restrições, em vez de criar outro. Use <b>Verificar se já existem</b> para ver quais seriam afetados antes de enviar.</p></details>
+        <details class="faq"><summary>E se o código já existir na loja?</summary><p>O app detecta os cupons que já existem e os corrige um a um com a UTM e as restrições configuradas agora (inclusive tirando o limite de uso, se o limite estiver desligado), em vez de dar erro. Use <b>Verificar se já existem</b> para ver quais seriam afetados antes de enviar.</p></details>
         <details class="faq"><summary>Dá para apagar um cupom criado errado?</summary><p>Não. A VTEX não exclui cupons, só arquiva, pelo Admin ou pela API, um de cada vez.</p></details>
         <details class="faq"><summary>Existe limite de cupons?</summary><p>Sim, a VTEX limita o número de cupons ativos por loja e recomenda reaproveitar cupons quando possível. Cupons arquivados não contam.</p></details>
         <details class="faq"><summary>Minhas credenciais ficam salvas?</summary><p>Não no servidor: elas vão junto de cada requisição e são repassadas direto para a VTEX. No seu navegador, só ficam guardadas se você marcar <i>Lembrar chave e token neste PC</i>. Em computador compartilhado, deixe desmarcado.</p></details>
@@ -700,6 +700,28 @@ function item(code,c){
   if(c.limitOn) cfg.maxUsage = c.maxUsage;
   return {quantity:1, couponConfiguration:cfg};
 }
+// Cupom que já existe: atualiza um a um pela rota de criar/atualizar cupom, com a config atual completa.
+function upsertItem(code,c){
+  const cfg = {couponCode:code, utmSource:c.utmSource, utmCampaign:c.utmCampaign||null, isArchived:false};
+  if(c.limitOn) cfg.maxUsage = c.maxUsage;
+  else { cfg.maxItemsPerClient = 0; cfg.expirationIntervalPerUse = "00:00:00"; }
+  return cfg;
+}
+async function upsertMany(list,cfg,label){
+  let ok=0; const out=[];
+  for(const x of list){
+    let r=null;
+    for(let a=1;a<=3;a++){
+      r = await vtex("POST","/api/rnb/pvt/coupon", upsertItem(x,cfg));
+      if(r.ok || ![0,429,500,502,503,504].includes(r.status) || a===3) break;
+      await sleep(2000*a);
+    }
+    if(r.ok){ ok++; out.push([x,"atualizado",""]); logLine(`${label}: ${x} atualizado com a nova config`,"ok"); }
+    else{ const d=r.status?errText(r):r.data; out.push([x,"erro",d]); logLine(`${label}: ${x} ERRO. ${d}`,"err"); }
+    await sleep(150);
+  }
+  return {ok, out};
+}
 $("btnPreview").onclick = () => {
   const p=$("json");
   if(p.classList.contains("show")){ p.classList.remove("show"); return; }
@@ -743,9 +765,22 @@ $("btnSend").onclick = async () => {
   $("log").innerHTML=""; $("bar").className="bar"; $("bar").style.width="0";
   $("btnSend").disabled=true; $("btnCancel").style.display=""; $("btnReport").style.display="none";
 
-  const list = codes.slice(); const size = Math.max(1, Math.min(parseInt(cfg.batchSize,10)||200, 500));
+  // Separa os códigos que já existem: esses são corrigidos com a config atual em vez de dar erro.
+  let existing = new Set();
+  const lr = await vtex("GET","/api/rnb/pvt/coupon");
+  if(lr.ok) existing = new Set((lr.data||[]).map(([code]) => code.toLowerCase()));
+  else logLine("Não consegui listar os cupons da loja; se algum já existir, ele será corrigido após o erro.","warn");
+  const toFix = codes.filter(x => existing.has(x.toLowerCase()));
+  const list = codes.filter(x => !existing.has(x.toLowerCase())); const size = Math.max(1, Math.min(parseInt(cfg.batchSize,10)||200, 500));
   const nb = Math.ceil(list.length/size); let sent=0, ok=0, fail=0; const t0=Date.now();
-  logLine(`Iniciando: ${list.length} cupons em ${nb} lote(s) de até ${size}.`);
+  const total = codes.length;
+  if(toFix.length){
+    logLine(`${toFix.length} cupom(ns) já existem: atualizando UTM e restrições com a config atual…`);
+    const u = await upsertMany(toFix,cfg,"Existente");
+    results.push(...u.out); ok += u.ok; fail += toFix.length-u.ok; sent += toFix.length;
+    progress(sent,total,ok,fail,t0);
+  }
+  if(list.length) logLine(`Criando: ${list.length} cupons novos em ${nb} lote(s) de até ${size}.`);
   for(let b=0; b<nb; b++){
     const chunk = list.slice(b*size,(b+1)*size);
     if(cancelReq){
@@ -762,8 +797,13 @@ $("btnSend").onclick = async () => {
     }
     sent += chunk.length;
     if(r.ok){ ok += chunk.length; chunk.forEach(x=>results.push([x,"criado/atualizado",""])); logLine(`Lote ${b+1}/${nb}: OK (${chunk.length} cupons)`,"ok"); }
+    else if(/exist/i.test(String(r.data||""))){
+      logLine(`Lote ${b+1}/${nb}: a VTEX disse que algum cupom já existe. Corrigindo um a um…`,"warn");
+      const u = await upsertMany(chunk,cfg,`Lote ${b+1}`);
+      results.push(...u.out); ok += u.ok; fail += chunk.length-u.ok;
+    }
     else{ fail += chunk.length; const d = r.status?errText(r):r.data; chunk.forEach(x=>results.push([x,"erro",d])); logLine(`Lote ${b+1}/${nb}: ERRO. ${d}`,"err"); }
-    progress(sent,list.length,ok,fail,t0);
+    progress(sent,total,ok,fail,t0);
     await sleep(400);
   }
   logLine(`Fim: ${ok} enviados com sucesso, ${fail} com erro.`);

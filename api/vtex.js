@@ -1,12 +1,13 @@
 // Proxy restrito para a API de Promoções da VTEX.
 // A API privada da VTEX não aceita chamadas diretas do navegador (CORS),
 // então a página chama /api/vtex e esta função repassa para a loja.
-// Só três rotas são permitidas, e nada é gravado: as credenciais vêm em cada requisição.
+// Só quatro rotas são permitidas, e nada é gravado: as credenciais vêm em cada requisição.
 
 const ALLOW = {
   "GET /api/rnb/pvt/benefits/calculatorconfiguration": "test",
   "GET /api/rnb/pvt/coupon": "list",
   "POST /api/rnb/pvt/multiple-coupons": "create",
+  "POST /api/rnb/pvt/coupon": "upsert",
 };
 const ENVS = ["vtexcommercestable", "vtexcommercebeta"];
 
@@ -30,6 +31,8 @@ module.exports = async (req, res) => {
   if (!appKey.trim() || !appToken.trim()) return res.status(400).json({ ok: false, error: "Informe AppKey e AppToken." });
   if (kind === "create" && (!Array.isArray(body) || body.length < 1 || body.length > 500))
     return res.status(400).json({ ok: false, error: "Envie entre 1 e 500 cupons por requisição." });
+  if (kind === "upsert" && (!body || typeof body !== "object" || Array.isArray(body) || !body.couponCode))
+    return res.status(400).json({ ok: false, error: "Envie um cupom com couponCode." });
 
   try {
     const r = await fetch(baseUrl(account, env) + path, {

@@ -23,6 +23,7 @@ ALLOW = {
     "GET /api/rnb/pvt/benefits/calculatorconfiguration": "test",
     "GET /api/rnb/pvt/coupon": "list",
     "POST /api/rnb/pvt/multiple-coupons": "create",
+    "POST /api/rnb/pvt/coupon": "upsert",
 }
 ENVS = {"vtexcommercestable", "vtexcommercebeta"}
 
@@ -59,6 +60,8 @@ def vtex():
         return jsonify(ok=False, error="Informe AppKey e AppToken."), 400
     if kind == "create" and (not isinstance(body, list) or not 1 <= len(body) <= 500):
         return jsonify(ok=False, error="Envie entre 1 e 500 cupons por requisição."), 400
+    if kind == "upsert" and (not isinstance(body, dict) or not body.get("couponCode")):
+        return jsonify(ok=False, error="Envie um cupom com couponCode."), 400
 
     base = BASE_URL_OVERRIDE.rstrip("/") if BASE_URL_OVERRIDE else f"https://{account}.{env}.com.br"
     try:
